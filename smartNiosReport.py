@@ -65,23 +65,34 @@ def formatGsheet(wks, colcount):  ## Applies a bit of formatting to the Google S
     borderitem = {"style": "SOLID"}
     fmt = cellFormat(textFormat=textFormat(bold=True, foregroundColor=color(1, 1, 1)), horizontalAlignment='CENTER',
                      backgroundColor=color(0, 0, 1), borders={"top": borderitem,"right": borderitem,"bottom": borderitem,"left": borderitem})
-    format_cell_ranges(wks, [('1', fmt)])
+    rangefmt = 'A1:' + gspread.utils.rowcol_to_a1(1,colcount)
+    format_cell_ranges(wks, [(rangefmt, fmt)])
     return None
 
 def pastecsv(csvContents, sheet, wksname):  # When gsheet exists, this function is used to import data without
     try:                                        # deleting all the existing worksheets (unlike import_csv function)
-        wksheet = sheet.add_worksheet(wksname, len(csvContents) + 2, len(csvContents[0]) + 10)
+        wksheet = sheet.add_worksheet(wksname, len(csvContents), len(csvContents[0]))
         body = {'requests': [{'pasteData': {'coordinate': {'sheetId': wksheet.id, 'rowIndex': 0, 'columnIndex': 0},
-                                            'data': csvContents, 'type': 'PASTE_NORMAL', 'delimiter': ','}}]}
-        sheet.batch_update(body)
-        return wksheet
+                                         'data': csvContents, 'type': 'PASTE_NORMAL', 'delimiter': ','}}]}
+        
+        try:
+            wksheet = sheet.batch_update(body)
+            return wksheet
+        except gspread.exceptions.APIError as err:
+            print('Error updating the worksheet:',str(err))
+            return
     except gspread.exceptions.GSpreadException or gspread.exceptions.APIError as errpastecsv:
-        print('Error adding Worksheet', str(errpastecsv))
         try:
             wksheet = sheet.worksheet(wksname)
             body = {'requests': [{'pasteData': {'coordinate': {'sheetId': wksheet.id, 'rowIndex': 0, 'columnIndex': 0},
                                             'data': csvContents, 'type': 'PASTE_NORMAL', 'delimiter': ','}}]}
-            sheet.batch_update(body)
+            wksheet.clear()
+            try:
+                wksheet = sheet.batch_update(body)
+                return wksheet
+            except gspread.exceptions.APIError as err:
+                print('Error updating the worksheet:', str(err))
+                return
             return wksheet
         except gspread.exceptions.WorksheetNotFound as ewnf:
             print('Worksheet not found', str(ewnf))
@@ -91,7 +102,7 @@ def csvtogsheet(conf, wksname, timenow):  # Opens (if exists) or Creates (if doe
     sheetname = ''
     myibmail = conf['ib_email']
     gc = gspread.service_account(conf['ib_service_acc'])
-    sheetname = 'Smart NIOS Report' + timenow
+    sheetname = 'Smart NIOS Report' # + timenow
     with open(wksname, 'r') as f:
         csvContents = f.read()
     # Email account is important, otherwise user will not be allowed to access or update the gsheet (it's created by a service account')
