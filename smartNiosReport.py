@@ -62,14 +62,15 @@ def formatGsheet(wks, colcount):  ## Applies a bit of formatting to the Google S
         "dimensions": {"sheetId": wks.id, "dimension": "COLUMNS", "startIndex": 0, "endIndex": colcount}}}]}
     wks.spreadsheet.batch_update(body)
     set_frozen(wks, rows=1)
+    borderitem = {"style": "SOLID"}
     fmt = cellFormat(textFormat=textFormat(bold=True, foregroundColor=color(1, 1, 1)), horizontalAlignment='CENTER',
-                     backgroundColor=color(0, 0, 1))
+                     backgroundColor=color(0, 0, 1), borders={"top": borderitem,"right": borderitem,"bottom": borderitem,"left": borderitem})
     format_cell_ranges(wks, [('1', fmt)])
     return None
 
 def pastecsv(csvContents, sheet, wksname):  # When gsheet exists, this function is used to import data without
     try:                                        # deleting all the existing worksheets (unlike import_csv function)
-        wksheet = sheet.add_worksheet(wksname, len(csvContents) + 10, len(csvContents[0]) + 10)
+        wksheet = sheet.add_worksheet(wksname, len(csvContents) + 2, len(csvContents[0]) + 10)
         body = {'requests': [{'pasteData': {'coordinate': {'sheetId': wksheet.id, 'rowIndex': 0, 'columnIndex': 0},
                                             'data': csvContents, 'type': 'PASTE_NORMAL', 'delimiter': ','}}]}
         sheet.batch_update(body)
