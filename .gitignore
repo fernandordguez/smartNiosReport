@@ -1,3 +1,16 @@
 
 objects.yaml
 *.pyc
+*.csv
+epirocbackup.tar copy.gz
+epirocdb copy.xml
+Networks
+NS_Records
+old/smartNiosReport 0.3.0.py
+old/smartNiosReport 0.4.0.py
+old/smartNiosReport copy.py
+old/smartNiosReport v0.2.py
+*.csv
+Smart NIOS Report.xlsx
+*.csv
+*.csv

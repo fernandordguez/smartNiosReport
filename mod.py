@@ -41,12 +41,20 @@
 
 ------------------------------------------------------------------------
 '''
-import logging
 import configparser
-import requests
+import json
+import logging
 import os
 import re
-import json
+import time
+import requests
+import tarfile
+import dblib
+import argparse, tarfile, sys, tqdm
+import collections
+import pprint
+from itertools import (takewhile, repeat)
+from lxml import etree
 
 # ** Global Vars **
 __version__ = '0.7.9'
@@ -98,7 +106,7 @@ def read_b1_ini(ini_filename):
     # Local Variables
     cfg = configparser.ConfigParser()
     config = {}
-    ini_keys = ['url', 'api_version', 'api_key', 'ib_email', 'dbfile', 'csvfile', 'gm_ip', 'gm_usr', 'gm_pwd', 'ib_service_acc']
+    ini_keys = ['url', 'api_version', 'api_key', 'ib_email', 'dbfile', 'csvfile', 'gm_ip', 'gm_usr', 'gm_pwd', 'ib_service_acc', 'yaml']
 
     # Check for inifile and raise exception if not found
     if os.path.isfile(ini_filename):
@@ -142,6 +150,60 @@ def read_b1_ini(ini_filename):
 
     return config
 
+def read_niosdb_ini(ini_filename):
+    '''
+    Open and parse ini file
+
+    Parameters:
+        ini_filename (str): name of inifile
+
+    Returns:
+        config (dict): Dictionary of BloxOne configuration elements
+
+    Raises:
+        IniFileSectionError
+        IniFileKeyError
+        APIKeyFormatError
+        FileNotFoundError
+
+    '''
+    # Local Variables
+    cfg = configparser.ConfigParser()
+    config = {}
+    ini_keys = ['ib_email', 'dbfile', 'csvfile', 'ib_service_acc', 'yaml']
+
+    # Check for inifile and raise exception if not found
+    if os.path.isfile(ini_filename):
+        # Attempt to read api_key from ini file
+        try:
+            cfg.read(ini_filename)
+        except configparser.Error as err:
+            logging.error(err)
+
+        # Look for BloxOne section
+        if 'NiosDB' in cfg:
+            for key in ini_keys:
+                # Check for key in BloxOne section
+                if key in cfg['NiosDB']:
+                    config[key] = cfg['NiosDB'][key].strip("'\"")
+                    logging.debug('Key {} found in {}: {}'
+                                  .format(key, ini_filename, config[key]))
+                else:
+                    logging.error('Key {} not found in BloxOne section.'
+                                  .format(key))
+                    raise IniFileKeyError('Key "' + key + '" not found within'
+                                                          '[NiosDB] section of ini file {}'.format(ini_filename))
+
+        else:
+            logging.error('No NiosDB Section in config file: {}'
+                          .format(ini_filename))
+            raise IniFileSectionError('No [NiosDB] section found in ini file {}'
+                                      .format(ini_filename))
+
+    else:
+        raise FileNotFoundError('ini file "{}" not found.'.format(ini_filename))
+
+    return config
 
 def verify_api_key(apikey):
     '''
@@ -425,7 +487,6 @@ def delete(self, url, id=""):
     response = self._apidelete(url)
 
     return response
-
 
 def update(self, url, id="", body=""):
     '''
