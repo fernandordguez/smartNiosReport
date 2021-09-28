@@ -92,17 +92,19 @@ def pastecsv(csvContents, sheet, wksname):  # When gsheet exists, this function 
                 return wksheet
             except gspread.exceptions.APIError as err:
                 print('Error updating the worksheet:', str(err))
+                print(wksname, ' report has not been completed')
                 return
             return wksheet
         except gspread.exceptions.WorksheetNotFound as ewnf:
             print('Worksheet not found', str(ewnf))
+            print(wksname,' report has not been completed')
     return
 
 def csvtogsheet(conf, wksname, timenow):  # Opens (if exists) or Creates (if doesn´t) a Gsheet
     sheetname = ''
     myibmail = conf['ib_email']
     gc = gspread.service_account(conf['ib_service_acc'])
-    sheetname = 'Smart NIOS Report' # + timenow
+    sheetname = 'Smart Report' # + timenow
     with open(wksname, 'r') as f:
         csvContents = f.read()
     # Email account is important, otherwise user will not be allowed to access or update the gsheet (it's created by a service account')
@@ -143,7 +145,7 @@ def export2gsheet(listcsvs, conf):
 
 def export2excel(listcsvs):
     # Export to a single Excel file with multiple tabs
-    with pd.ExcelWriter('Smart NIOS Report.xlsx', engine='xlsxwriter') as writer:
+    with pd.ExcelWriter('Smart Report.xlsx', engine='xlsxwriter') as writer:
         for k in listcsvs:
             dftemp = pd.read_csv(k)
             dftemp.to_excel(writer, sheet_name=k.split('.')[0])
@@ -217,18 +219,17 @@ def get_args():  ## Handles the arguments passed to the script from the command 
     return par.parse_args(args=None if sys.argv[1:] else ['-h'])
 
 def main():
-
-listobjects = []
-report = defaultdict()
-args = get_args()
-conf = read_niosdb_ini(args.config)
-yamlObjects = dblib.DBCONFIG(conf['yaml'])
-listobjects = parseniosdb(conf['dbfile'])
-report, listcsvs = processreports(listobjects, yamlObjects)
+    listobjects = []
+    report = defaultdict()
+    args = get_args()
+    conf = read_niosdb_ini(args.config)
+    yamlObjects = dblib.DBCONFIG(conf['yaml'])
+    listobjects = parseniosdb(conf['dbfile'])
+    report, listcsvs = processreports(listobjects, yamlObjects)
     if args.report == 'excel':
         export2excel(listcsvs)
     elif args.report == 'gsheet':
-        export2gsheet(report, conf)
+        export2gsheet(listcsvs, conf)
         
 ### Main ###
 if __name__ == '__main__':
